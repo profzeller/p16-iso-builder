@@ -1,0 +1,191 @@
+#cloud-config
+autoinstall:
+  version: 1
+
+  # =============================================================================
+  # Interactive sections - these will prompt the user
+  # =============================================================================
+  interactive-sections:
+    - identity
+    - network
+    - storage
+
+  # =============================================================================
+  # Locale and Keyboard
+  # =============================================================================
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+
+  # =============================================================================
+  # Identity - Will prompt user (in interactive-sections)
+  # These are defaults shown in the prompts
+  # =============================================================================
+  identity:
+    hostname: gpu-server-01
+    username: admin
+    # Password: gpu-server (change this!)
+    # Generate with: openssl passwd -6 'your-password'
+    password: "$6$rounds=4096$randomsalt$LQe1fT9BpGPP0GJT3D8J.dCX0oKQ9Fz/YH8xKZ8OqFiRQkTvNM9N5L0Y7KfH8tT5M9Q4RhqK3vV2wX6zY1aB0."
+
+  # =============================================================================
+  # Storage - Will prompt user (in interactive-sections)
+  # Default: use entire disk with LVM
+  # =============================================================================
+  storage:
+    layout:
+      name: lvm
+      sizing-policy: all
+
+  # =============================================================================
+  # Network - Will prompt user (in interactive-sections)
+  # Default: DHCP on first interface
+  # =============================================================================
+  network:
+    version: 2
+    ethernets:
+      id0:
+        match:
+          driver: "*"
+        dhcp4: true
+
+  # =============================================================================
+  # SSH - Enable for remote access
+  # =============================================================================
+  ssh:
+    install-server: true
+    allow-pw: true
+
+  # =============================================================================
+  # Packages to install
+  # =============================================================================
+  packages:
+    # Essentials
+    - curl
+    - wget
+    - git
+    - htop
+    - vim
+    - net-tools
+    - openssh-server
+    - ca-certificates
+    - gnupg
+    - lsb-release
+
+    # Build tools (for NVIDIA)
+    - build-essential
+    - dkms
+
+    # Hardware tools
+    - pciutils
+    - usbutils
+    - lm-sensors
+    - nvme-cli
+
+    # System monitoring
+    - sysstat
+    - iotop
+
+  # =============================================================================
+  # Package repository updates
+  # =============================================================================
+  apt:
+    preserve_sources_list: false
+    primary:
+      - arches: [amd64]
+        uri: http://archive.ubuntu.com/ubuntu
+    security:
+      - arches: [amd64]
+        uri: http://security.ubuntu.com/ubuntu
+
+  # =============================================================================
+  # Late Commands - Run after installation
+  # =============================================================================
+  late-commands:
+    # Copy server-setup utility
+    - cp /cdrom/p16-setup/setup.sh /target/usr/local/bin/server-setup
+    - chmod +x /target/usr/local/bin/server-setup
+
+    # Create auto-start script
+    - |
+      cat > /target/etc/profile.d/server-setup-autostart.sh << 'EOF'
+      # Auto-start server-setup menu on interactive login
+      if [[ $- == *i* ]] && [[ -z "$SERVER_SETUP_RUNNING" ]]; then
+          if [ ! -f /etc/gpu-server/.menu-disabled ]; then
+              export SERVER_SETUP_RUNNING=1
+              /usr/local/bin/server-setup
+          fi
+      fi
+      EOF
+
+    # Create gpu-server directory
+    - mkdir -p /target/etc/gpu-server
+
+    # Add NVIDIA repository
+    - curtin in-target -- bash -c 'curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg'
+    - curtin in-target -- bash -c 'curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed "s#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g" > /etc/apt/sources.list.d/nvidia-container-toolkit.list'
+
+    # Add Docker repository
+    - curtin in-target -- bash -c 'curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker.gpg'
+    - curtin in-target -- bash -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list'
+
+    # Install NVIDIA driver and Docker
+    - curtin in-target -- apt-get update
+    - curtin in-target -- apt-get install -y nvidia-driver-550 nvidia-container-toolkit
+    - curtin in-target -- apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    # Configure Docker for NVIDIA
+    - curtin in-target -- nvidia-ctk runtime configure --runtime=docker
+
+    # Add user to docker group
+    - curtin in-target -- usermod -aG docker admin
+
+    # Enable services
+    - curtin in-target -- systemctl enable docker
+    - curtin in-target -- systemctl enable ssh
+
+    # Disable suspend/hibernate for server use
+    - curtin in-target -- systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
+
+    # Set up lid close behavior (ignore)
+    - |
+      cat >> /target/etc/systemd/logind.conf << 'EOF'
+      HandleLidSwitch=ignore
+      HandleLidSwitchExternalPower=ignore
+      HandleLidSwitchDocked=ignore
+      EOF
+
+    # Welcome message
+    - |
+      cat > /target/etc/motd << 'EOF'
+
+      ╔═══════════════════════════════════════════════════════════════════════╗
+      ║                    P16 GPU Server                                      ║
+      ║                                                                        ║
+      ║  Run 'server-setup' to configure this server                          ║
+      ║  Or the menu will appear automatically on next login                   ║
+      ╚═══════════════════════════════════════════════════════════════════════╝
+
+      EOF
+
+  # =============================================================================
+  # User data for first boot
+  # =============================================================================
+  user-data:
+    disable_root: true
+    timezone: UTC
+
+  # =============================================================================
+  # Final message
+  # =============================================================================
+  final-message: |
+    P16 GPU Server installation complete!
+
+    The system will reboot. On first login, the server-setup
+    utility will launch automatically.
+
+    Default credentials:
+      Username: admin
+      Password: gpu-server (CHANGE THIS!)
+
+    Installation took $RUNTIME seconds.

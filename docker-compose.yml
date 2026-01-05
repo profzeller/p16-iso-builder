@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  iso-builder:
+    build: .
+    image: p16-iso-builder:latest
+    container_name: p16-iso-builder
+    volumes:
+      - ./output:/output
+      - ./cache:/cache
+    environment:
+      - OUTPUT_NAME=${OUTPUT_NAME:-p16-gpu-server-24.04.iso}
