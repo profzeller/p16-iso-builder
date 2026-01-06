@@ -99,14 +99,14 @@ autoinstall:
         uri: http://security.ubuntu.com/ubuntu
 
   # =============================================================================
-  # Late Commands - Run after installation
+  # Late Commands - Run after installation (minimal - use server-setup for rest)
   # =============================================================================
   late-commands:
     # Copy server-setup utility
     - cp /cdrom/p16-setup/setup.sh /target/usr/local/bin/server-setup
     - chmod +x /target/usr/local/bin/server-setup
 
-    # Create auto-start script
+    # Create auto-start script for first login
     - |
       cat > /target/etc/profile.d/server-setup-autostart.sh << 'EOF'
       # Auto-start server-setup menu on interactive login
@@ -121,33 +121,13 @@ autoinstall:
     # Create gpu-server directory
     - mkdir -p /target/etc/gpu-server
 
-    # Add NVIDIA repository
-    - curtin in-target -- bash -c 'curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg'
-    - curtin in-target -- bash -c 'curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed "s#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g" > /etc/apt/sources.list.d/nvidia-container-toolkit.list'
-
-    # Add Docker repository
-    - curtin in-target -- bash -c 'curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker.gpg'
-    - curtin in-target -- bash -c 'echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list'
-
-    # Install NVIDIA driver and Docker
-    - curtin in-target -- apt-get update
-    - curtin in-target -- apt-get install -y nvidia-driver-550 nvidia-container-toolkit
-    - curtin in-target -- apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-    # Configure Docker for NVIDIA
-    - curtin in-target -- nvidia-ctk runtime configure --runtime=docker
-
-    # Add user to docker group
-    - curtin in-target -- usermod -aG docker admin
-
-    # Enable services
-    - curtin in-target -- systemctl enable docker
+    # Enable SSH
     - curtin in-target -- systemctl enable ssh
 
     # Disable suspend/hibernate for server use
     - curtin in-target -- systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
 
-    # Set up lid close behavior (ignore)
+    # Set up lid close behavior (ignore) for laptop servers
     - |
       cat >> /target/etc/systemd/logind.conf << 'EOF'
       HandleLidSwitch=ignore
@@ -155,15 +135,17 @@ autoinstall:
       HandleLidSwitchDocked=ignore
       EOF
 
-    # Welcome message
+    # Welcome message with instructions
     - |
       cat > /target/etc/motd << 'EOF'
 
       ╔═══════════════════════════════════════════════════════════════════════╗
       ║                    P16 GPU Server                                      ║
       ║                                                                        ║
-      ║  Run 'server-setup' to configure this server                          ║
-      ║  Or the menu will appear automatically on next login                   ║
+      ║  The server-setup utility will launch automatically.                   ║
+      ║  Use it to install NVIDIA drivers, Docker, and AI services.           ║
+      ║                                                                        ║
+      ║  Or run 'server-setup' manually at any time.                          ║
       ╚═══════════════════════════════════════════════════════════════════════╝
 
       EOF
@@ -179,13 +161,9 @@ autoinstall:
   # Final message
   # =============================================================================
   final-message: |
-    P16 GPU Server installation complete!
+    P16 GPU Server base installation complete!
 
-    The system will reboot. On first login, the server-setup
-    utility will launch automatically.
-
-    Default credentials:
-      Username: admin
-      Password: gpu-server (CHANGE THIS!)
+    On first login, server-setup will launch automatically.
+    Use it to install NVIDIA drivers, Docker, and AI services.
 
     Installation took $RUNTIME seconds.
