@@ -172,13 +172,13 @@ if [ -f /work/iso-extract/boot/grub/grub.cfg ]; then
 # P16 GPU Server Installation Options
 menuentry "P16 GPU Server - Interactive Install" {
     set gfxpayload=keep
-    linux   /casper/vmlinuz quiet autoinstall ds=nocloud\;s=/cdrom/autoinstall/ ---
+    linux   /casper/vmlinuz quiet autoinstall ds=nocloud\;s=/cdrom/autoinstall/ fsck.mode=skip ---
     initrd  /casper/initrd
 }
 
 menuentry "P16 GPU Server - Expert Install (Manual)" {
     set gfxpayload=keep
-    linux   /casper/vmlinuz ---
+    linux   /casper/vmlinuz fsck.mode=skip ---
     initrd  /casper/initrd
 }
 GRUBCFG
