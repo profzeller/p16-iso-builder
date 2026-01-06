@@ -7,11 +7,11 @@ set -e
 # =============================================================================
 
 # Configuration
-UBUNTU_VERSION="24.04"
+UBUNTU_VERSION="24.04.3"
 UBUNTU_CODENAME="noble"
-ISO_URL="https://releases.ubuntu.com/${UBUNTU_VERSION}/ubuntu-${UBUNTU_VERSION}-live-server-amd64.iso"
+ISO_URL="https://releases.ubuntu.com/24.04/ubuntu-${UBUNTU_VERSION}-live-server-amd64.iso"
 ISO_NAME="ubuntu-${UBUNTU_VERSION}-live-server-amd64.iso"
-OUTPUT_NAME="${OUTPUT_NAME:-p16-gpu-server-${UBUNTU_VERSION}.iso}"
+OUTPUT_NAME="${OUTPUT_NAME:-p16-gpu-server-24.04.iso}"
 NVIDIA_DRIVER="nvidia-driver-550"
 
 # Colors
@@ -203,33 +203,49 @@ section "Rebuilding ISO"
 log "Generating new ISO..."
 cd /work/iso-extract
 
-# Create new ISO with proper boot support
+# Ubuntu 24.04 uses EFI boot - extract EFI partition from original ISO
+log "Extracting EFI partition from original ISO..."
+
+# The EFI partition starts at sector 1610304 with size 10160 sectors (from xorriso report_el_torito)
+dd if="/work/${ISO_NAME}" bs=512 skip=1610304 count=10160 of=/work/efi.img 2>/dev/null
+
+# Create ISO using xorriso with parameters matching original Ubuntu ISO structure
+log "Building new ISO with BIOS and EFI boot support..."
 xorriso -as mkisofs \
-    -r -V "P16-GPU-SERVER" \
+    -r \
+    -V "P16-GPU-SERVER" \
     -o "/output/${OUTPUT_NAME}" \
     -J -joliet-long \
-    -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
+    --grub2-mbr --interval:local_fs:0s-15s:zero_mbrpt,zero_gpt:"/work/${ISO_NAME}" \
+    --protective-msdos-label \
+    -partition_cyl_align off \
     -partition_offset 16 \
-    -c isolinux/boot.cat \
-    -b isolinux/isolinux.bin \
+    --mbr-force-bootable \
+    -append_partition 2 28732ac11ff8d211ba4b00a0c93ec93b /work/efi.img \
+    -appended_part_as_gpt \
+    -iso_mbr_part_type a2a0d0ebe5b9334487c068b6b72699c7 \
+    -c '/boot.catalog' \
+    -b '/boot/grub/i386-pc/eltorito.img' \
     -no-emul-boot \
     -boot-load-size 4 \
     -boot-info-table \
+    --grub2-boot-info \
     -eltorito-alt-boot \
-    -e boot/grub/efi.img \
+    -e '--interval:appended_partition_2:::' \
     -no-emul-boot \
-    -isohybrid-gpt-basdat \
-    . 2>/dev/null || {
-        # Fallback for different ISO structure
-        log "Using alternative ISO generation method..."
-        genisoimage -r -V "P16-GPU-SERVER" \
-            -cache-inodes -J -l \
-            -b isolinux/isolinux.bin \
-            -c isolinux/boot.cat \
+    . 2>&1 || {
+        # Fallback: simpler approach - BIOS only boot
+        log "Trying simplified BIOS-only boot..."
+        xorriso -as mkisofs \
+            -r -V "P16-GPU-SERVER" \
+            -o "/output/${OUTPUT_NAME}" \
+            -J -joliet-long \
+            -c '/boot.catalog' \
+            -b '/boot/grub/i386-pc/eltorito.img' \
             -no-emul-boot \
             -boot-load-size 4 \
             -boot-info-table \
-            -o "/output/${OUTPUT_NAME}" \
+            --grub2-boot-info \
             .
     }
 
