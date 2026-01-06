@@ -1,5 +1,7 @@
 # P16 GPU Server ISO Builder
 
+> Part of the [P16 GPU Server](https://github.com/profzeller/p16-server-setup) ecosystem
+
 Docker-based tool to create custom Ubuntu Server 24.04 LTS ISOs for P16 GPU servers.
 
 ## Features
