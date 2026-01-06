@@ -5,9 +5,10 @@ Docker-based tool to create custom Ubuntu Server 24.04 LTS ISOs for P16 GPU serv
 ## Features
 
 - Ubuntu Server 24.04 LTS base
-- Pre-installed NVIDIA drivers (550) and Container Toolkit
-- Pre-installed Docker with GPU support
+- NVIDIA drivers (550) and Container Toolkit via server-setup
+- Docker with GPU support and UFW firewall integration
 - Auto-boots to `server-setup` menu on first login
+- UFW firewall properly controls Docker container traffic
 - Unattended installation option
 
 ## Quick Start
@@ -30,10 +31,16 @@ Docker-based tool to create custom Ubuntu Server 24.04 LTS ISOs for P16 GPU serv
 | Component | Version | Notes |
 |-----------|---------|-------|
 | Ubuntu Server | 24.04 LTS | Latest kernel |
-| NVIDIA Driver | 550 | Included in ISO |
+| NVIDIA Driver | 550 | Installed via server-setup |
 | NVIDIA Container Toolkit | Latest | For Docker GPU |
-| Docker CE | Latest | Pre-configured |
-| server-setup | v1.0.0 | Auto-starts on login |
+| Docker CE | Latest | With UFW integration |
+| server-setup | Latest | Auto-starts on login |
+
+### Security Features
+
+- **UFW Firewall** - Configured to control all traffic including Docker
+- **Docker UFW Integration** - Docker containers properly controlled by firewall rules
+- **SSH Hardening** - Secure SSH configuration out of the box
 
 ## Installation Options
 
