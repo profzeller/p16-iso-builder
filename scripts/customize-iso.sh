@@ -167,18 +167,25 @@ log "Updating GRUB configuration..."
 # Modify grub.cfg for autoinstall option
 if [ -f /work/iso-extract/boot/grub/grub.cfg ]; then
     # Add custom menu entry for P16 GPU Server install
+    # Using video=1920x1080 and nomodeset for readable text on 4K displays
     cat >> /work/iso-extract/boot/grub/grub.cfg << 'GRUBCFG'
 
 # P16 GPU Server Installation Options
 menuentry "P16 GPU Server - Interactive Install" {
+    set gfxpayload=1920x1080
+    linux   /casper/vmlinuz quiet autoinstall ds=nocloud\;s=/cdrom/autoinstall/ fsck.mode=skip video=1920x1080 ---
+    initrd  /casper/initrd
+}
+
+menuentry "P16 GPU Server - Interactive Install (4K Native)" {
     set gfxpayload=keep
     linux   /casper/vmlinuz quiet autoinstall ds=nocloud\;s=/cdrom/autoinstall/ fsck.mode=skip ---
     initrd  /casper/initrd
 }
 
 menuentry "P16 GPU Server - Expert Install (Manual)" {
-    set gfxpayload=keep
-    linux   /casper/vmlinuz fsck.mode=skip ---
+    set gfxpayload=1920x1080
+    linux   /casper/vmlinuz fsck.mode=skip video=1920x1080 ---
     initrd  /casper/initrd
 }
 GRUBCFG
@@ -191,7 +198,7 @@ if [ -f /work/iso-extract/isolinux/txt.cfg ]; then
 label p16-auto
   menu label ^P16 GPU Server - Interactive Install
   kernel /casper/vmlinuz
-  append initrd=/casper/initrd quiet autoinstall ds=nocloud;s=/cdrom/autoinstall/ ---
+  append initrd=/casper/initrd quiet autoinstall ds=nocloud;s=/cdrom/autoinstall/ video=1920x1080 vga=791 ---
 ISOLINUX
     log "ISOLINUX configuration updated"
 fi

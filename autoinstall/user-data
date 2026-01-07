@@ -102,25 +102,18 @@ autoinstall:
         uri: http://security.ubuntu.com/ubuntu
 
   # =============================================================================
-  # Late Commands - Run after installation (minimal - use server-setup for rest)
+  # Late Commands - Run after installation (minimal - server-setup does the rest)
   # =============================================================================
   late-commands:
     - cp /cdrom/p16-setup/setup.sh /target/usr/local/bin/server-setup
     - chmod +x /target/usr/local/bin/server-setup
-    - mkdir -p /target/etc/gpu-server
     - curtin in-target -- systemctl enable ssh
-    - curtin in-target -- systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
     - echo '#!/bin/bash' > /target/etc/profile.d/server-setup-autostart.sh
     - echo 'if [[ $- == *i* ]] && [[ -z "$SERVER_SETUP_RUNNING" ]]; then' >> /target/etc/profile.d/server-setup-autostart.sh
-    - echo '  if [ ! -f /etc/gpu-server/.menu-disabled ]; then' >> /target/etc/profile.d/server-setup-autostart.sh
-    - echo '    export SERVER_SETUP_RUNNING=1' >> /target/etc/profile.d/server-setup-autostart.sh
-    - echo '    /usr/local/bin/server-setup' >> /target/etc/profile.d/server-setup-autostart.sh
-    - echo '  fi' >> /target/etc/profile.d/server-setup-autostart.sh
+    - echo '  export SERVER_SETUP_RUNNING=1' >> /target/etc/profile.d/server-setup-autostart.sh
+    - echo '  /usr/local/bin/server-setup' >> /target/etc/profile.d/server-setup-autostart.sh
     - echo 'fi' >> /target/etc/profile.d/server-setup-autostart.sh
     - chmod +x /target/etc/profile.d/server-setup-autostart.sh
-    - echo 'HandleLidSwitch=ignore' >> /target/etc/systemd/logind.conf
-    - echo 'HandleLidSwitchExternalPower=ignore' >> /target/etc/systemd/logind.conf
-    - echo 'HandleLidSwitchDocked=ignore' >> /target/etc/systemd/logind.conf
 
   # =============================================================================
   # Timezone
