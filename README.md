@@ -61,9 +61,9 @@ For automated deployments, the ISO includes autoinstall support:
 autoinstall ds=nocloud;s=/cdrom/autoinstall/
 ```
 
-Default credentials (change immediately):
-- Username: `admin`
-- Password: `gpu-server`
+Default credentials (change via server-setup menu):
+- Username: `sysadmin`
+- Password: `NDGlabpass123!`
 
 ## Customization
 

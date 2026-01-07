@@ -7,7 +7,6 @@ autoinstall:
   # =============================================================================
   interactive-sections:
     - identity
-    - network
     - storage
 
   # =============================================================================
@@ -23,10 +22,10 @@ autoinstall:
   # =============================================================================
   identity:
     hostname: gpu-server-01
-    username: admin
-    # Password: gpu-server (change this!)
+    username: sysadmin
+    # Password: NDGlabpass123! (change via server-setup menu)
     # Generate with: openssl passwd -6 'your-password'
-    password: "$6$rounds=4096$randomsalt$LQe1fT9BpGPP0GJT3D8J.dCX0oKQ9Fz/YH8xKZ8OqFiRQkTvNM9N5L0Y7KfH8tT5M9Q4RhqK3vV2wX6zY1aB0."
+    password: "$6$MvrnOcSGX19gqNmy$r39LzdgHyCNnhO/mSaGZKe2k47JsSCxx4qXisflxmMa.alFGBJ1SMGmzsEcp5J1zecaeY2pERkC.Eonv1T5dm/"
 
   # =============================================================================
   # Storage - Will prompt user (in interactive-sections)
