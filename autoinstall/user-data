@@ -37,16 +37,20 @@ autoinstall:
       sizing-policy: all
 
   # =============================================================================
-  # Network - Will prompt user (in interactive-sections)
-  # Default: DHCP on first interface
+  # Network - DHCP on all ethernet interfaces
   # =============================================================================
   network:
-    version: 2
-    ethernets:
-      id0:
-        match:
-          driver: "*"
-        dhcp4: true
+    network:
+      version: 2
+      ethernets:
+        all-en:
+          match:
+            name: "en*"
+          dhcp4: true
+        all-eth:
+          match:
+            name: "eth*"
+          dhcp4: true
 
   # =============================================================================
   # SSH - Enable for remote access
@@ -101,68 +105,24 @@ autoinstall:
   # Late Commands - Run after installation (minimal - use server-setup for rest)
   # =============================================================================
   late-commands:
-    # Copy server-setup utility
     - cp /cdrom/p16-setup/setup.sh /target/usr/local/bin/server-setup
     - chmod +x /target/usr/local/bin/server-setup
-
-    # Create auto-start script for first login
-    - |
-      cat > /target/etc/profile.d/server-setup-autostart.sh << 'EOF'
-      # Auto-start server-setup menu on interactive login
-      if [[ $- == *i* ]] && [[ -z "$SERVER_SETUP_RUNNING" ]]; then
-          if [ ! -f /etc/gpu-server/.menu-disabled ]; then
-              export SERVER_SETUP_RUNNING=1
-              /usr/local/bin/server-setup
-          fi
-      fi
-      EOF
-
-    # Create gpu-server directory
     - mkdir -p /target/etc/gpu-server
-
-    # Enable SSH
     - curtin in-target -- systemctl enable ssh
-
-    # Disable suspend/hibernate for server use
     - curtin in-target -- systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
-
-    # Set up lid close behavior (ignore) for laptop servers
-    - |
-      cat >> /target/etc/systemd/logind.conf << 'EOF'
-      HandleLidSwitch=ignore
-      HandleLidSwitchExternalPower=ignore
-      HandleLidSwitchDocked=ignore
-      EOF
-
-    # Welcome message with instructions
-    - |
-      cat > /target/etc/motd << 'EOF'
-
-      ╔═══════════════════════════════════════════════════════════════════════╗
-      ║                    P16 GPU Server                                      ║
-      ║                                                                        ║
-      ║  The server-setup utility will launch automatically.                   ║
-      ║  Use it to install NVIDIA drivers, Docker, and AI services.           ║
-      ║                                                                        ║
-      ║  Or run 'server-setup' manually at any time.                          ║
-      ╚═══════════════════════════════════════════════════════════════════════╝
-
-      EOF
+    - echo '#!/bin/bash' > /target/etc/profile.d/server-setup-autostart.sh
+    - echo 'if [[ $- == *i* ]] && [[ -z "$SERVER_SETUP_RUNNING" ]]; then' >> /target/etc/profile.d/server-setup-autostart.sh
+    - echo '  if [ ! -f /etc/gpu-server/.menu-disabled ]; then' >> /target/etc/profile.d/server-setup-autostart.sh
+    - echo '    export SERVER_SETUP_RUNNING=1' >> /target/etc/profile.d/server-setup-autostart.sh
+    - echo '    /usr/local/bin/server-setup' >> /target/etc/profile.d/server-setup-autostart.sh
+    - echo '  fi' >> /target/etc/profile.d/server-setup-autostart.sh
+    - echo 'fi' >> /target/etc/profile.d/server-setup-autostart.sh
+    - chmod +x /target/etc/profile.d/server-setup-autostart.sh
+    - echo 'HandleLidSwitch=ignore' >> /target/etc/systemd/logind.conf
+    - echo 'HandleLidSwitchExternalPower=ignore' >> /target/etc/systemd/logind.conf
+    - echo 'HandleLidSwitchDocked=ignore' >> /target/etc/systemd/logind.conf
 
   # =============================================================================
-  # User data for first boot
+  # Timezone
   # =============================================================================
-  user-data:
-    disable_root: true
-    timezone: UTC
-
-  # =============================================================================
-  # Final message
-  # =============================================================================
-  final-message: |
-    P16 GPU Server base installation complete!
-
-    On first login, server-setup will launch automatically.
-    Use it to install NVIDIA drivers, Docker, and AI services.
-
-    Installation took $RUNTIME seconds.
+  timezone: UTC
